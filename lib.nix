@@ -2,7 +2,7 @@
 # ----------------
 # in here are all the code that is terranix
 
-{ stdenv, writeShellScriptBin, writeText, pandoc, ... }:
+{ stdenv, writeShellScriptBin, writeText, pandoc, pkgs ? import <nixpkgs> { }, ... }:
 let
   usage = writeText "useage" ''
     Usage: terranix [-q|--quiet] [--trace|--show-trace] [--with-nulls] [path]
@@ -58,7 +58,8 @@ let
       path           path to the config.nix
 
   '';
-in {
+in
+{
 
   terranix = writeShellScriptBin "terranix" # sh
     ''
@@ -110,11 +111,10 @@ in {
           $TRACE \
           -I config=$FILE \
           --expr "
-        with import <nixpkgs> {};
         let
           terranix_data = import ${
             toString ./core/default.nix
-          } { terranix_config = { imports = [ <config> ]; }; strip_nulls = ''${STRIP_NULLS}; };
+          } { terranix_config = { imports = [ <config> ]; }; strip_nulls = ''${STRIP_NULLS}; pkgs = import ${pkgs.path} { }; };
           terraform_json = builtins.toJSON (terranix_data.config);
         in { run = pkgs.writeText \"config.tf.json\" terraform_json; }
       " )
@@ -176,7 +176,7 @@ in {
         $OFFLINE \
         $TRACE \
         -I config=$FILE \
-        --expr "with import <nixpkgs> {}; callPackage ${
+        --expr "with import ${pkgs.path} {}; callPackage ${
           toString ./bin/terranix-doc-man.nix
         } { pkgs = pkgs; }"
     )
@@ -257,7 +257,7 @@ in {
         $OFFLINE \
         $TRACE \
         -I config=$FILE \
-        --expr "with import <nixpkgs> {}; callPackage ${
+        --expr "with import ${pkgs.path} {}; callPackage ${
           toString ./bin/terranix-doc-json.nix
         } { pkgs = pkgs; arguments = { path = $RELATIVE_PATH; urlPrefix = \"$URL_PREFIX\"; urlSuffix = \"$URL_SUFFIX\"; }; }"
     )
